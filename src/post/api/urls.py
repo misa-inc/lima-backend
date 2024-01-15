@@ -1,0 +1,51 @@
+from django.urls import path
+from .views import *
+
+
+urlpatterns = [
+    # POST VIEWS    
+    path('create-post/', CreatePostView.as_view(), name='create_post'),
+    path('post-delete/', PostDeleteView.as_view(), name='post_delete'),
+    path('post/<int:id>/update/', PostUpdateView.as_view(), name='post_update'),
+    path('post/vote/', VoteOnPost, name='vote_post'),
+    path('user/voted/post/', user_voted_post, name='user_voted_post'),
+    path("post/repost/", RePostView , name="repost-view"),
+    path("report/post/", report_post, name="report_post"),
+    path('user/reported/post/', user_reported_post, name='user_reported_post'),
+    path("save/post/", save_post, name="save_post"),
+    path('user/saved/post/', user_saved_post, name='user_saved_post'),
+    path('user/<str:username>/posts/', ListPostsOfUser, name='users_posts'), 
+    path('user/<str:username>/posts/<int:p_id>/', DetailPostOfUser.as_view(), name='users_post_detail'),
+    # COMMENT VIEWS
+    path('create-comment/', CreateCommentView.as_view(), name='create_comment'),
+    path('comment-delete/', CommentDeleteView.as_view(), name='comment_delete'),
+    path('comment/<int:id>/update/', CommentUpdateView.as_view(), name='comment_update'),
+    path('comment/vote/', VoteOnComment, name='vote_comment'),
+    path('user/voted/comment/', user_voted_comment, name='user_voted_comment'),
+    path("report/comment/", report_comment, name="report_comment"),
+    path('user/reported/comment/', user_reported_comment, name='user_reported_comment'),
+    path("save/comment/", save_comment, name="save_comment"),
+    path('user/saved/comment/', user_saved_comment, name='user_saved_comment'),
+    path('user/<str:username>/comments/', ListCommentsOfUser.as_view(), name='users-comments'),
+    path('user/<str:username>/comments/<int:c_id>/', DetailCommentsOfUser.as_view(), name='users-comments-detail'), 
+    path('posts/<int:p_id>/popular-comments/', ListPopularCommentsOfPost.as_view(), name='popular-post-comments'),
+    path('posts/<int:p_id>/old-comments/', ListOldCommentsOfPost.as_view(), name='old-post-comments'),
+    path('posts/<int:p_id>/new-comments/', ListNewCommentsOfPost.as_view(), name='new-post-comments'),
+    path('posts/<int:p_id>/comments/<int:c_id>/', DetailCommentsOfPost.as_view(), name='post-comments-detail'),
+    # ANSWER VIEWS
+    path('create-answer/', CreateAnswerView.as_view(), name='create_answer'),
+    path('answer-delete/', AnswerDeleteView.as_view(), name='answer_delete'),
+    path('answer/<int:id>/update/', AnswerUpdateView.as_view(), name='answer_update'),
+    path('answer/vote/', VoteOnAnswer, name='vote_answer'),
+    path('user/voted/answer/', user_voted_answer, name='user_voted_answer'),
+    path("report/answer/", report_answer, name="report_answer"),
+    path('user/reported/answer/', user_reported_answer, name='user_reported_answer'),
+    path("save/answer/", save_answer, name="save_answer"),
+    path('user/saved/answer/', user_saved_answer, name='user_saved_answer'),
+    path('user/<str:username>/answers/', ListAnswersOfUser.as_view(), name='users-answers'),
+    path('user/<str:username>/answers/<int:a_id>/', DetailAnswersOfUser.as_view(), name='users-answers-detail'), 
+    path('posts/<int:p_id>/popular-answers/', ListPopularAnswersOfPost.as_view(), name='popular-post-answers'),
+    path('posts/<int:p_id>/old-answers/', ListOldAnswersOfPost.as_view(), name='old-post-answers'),
+    path('posts/<int:p_id>/new-answers/', ListNewAnswersOfPost.as_view(), name='new-post-answers'),
+    path('posts/<int:p_id>/answers/<int:a_id>/', DetailAnswersOfPost.as_view(), name='post-answers-detail'),
+]

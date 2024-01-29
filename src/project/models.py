@@ -12,7 +12,7 @@ from datetime import date
 from guardian.shortcuts import assign_perm
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
-# TODO Add more details to project
+#TODO add the notification feature
 
 
 def link_to(instance, filename):
@@ -121,15 +121,24 @@ class Project(models.Model):
         upload_to=project_for, blank=True, null=True, max_length=1000000
     )
     name = models.CharField(max_length=250, unique=True)
+    about = models.TextField(blank=True, null=True, max_length=100000)
     description = models.TextField(blank=True, null=True, max_length=100000)
+    code_of_conduct = models.TextField(blank=True, null=True, max_length=100000)
     category = models.CharField(max_length=1000, null=True, blank=True)
-    project_type = models.CharField(max_length=100, null=True, blank=True)
+    project_type = models.CharField(max_length=100, null=True, blank=True)#directory type or normal type
     subscribers = models.ManyToManyField(
         'account.User', related_name="project_subscribers", blank=True, default=None
     )
     moderators = models.ManyToManyField(
         'account.User', related_name="project_moderators", blank=True, default=None
     )
+    pages = models.ManyToManyField(
+        'page.Page', related_name="project_pages", blank=True, default=None
+    )
+    books = models.ManyToManyField(
+        'library.Book', related_name="project_books", blank=True, default=None
+    )
+    directory = models.ForeignKey('directory.Directory', on_delete=models.CASCADE, blank=True, null=True, related_name="project_directory")
     creator = models.ForeignKey('account.User', on_delete=models.CASCADE, related_name="creator")
     created = models.DateTimeField(auto_now_add=True)
     day = models.CharField(max_length=1000, null=True, blank=True)

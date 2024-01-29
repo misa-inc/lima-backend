@@ -12,7 +12,7 @@ from datetime import date
 from guardian.shortcuts import assign_perm
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
-#TODO Add Delivery, Tag, Rollout, Training, Environment, Branch, Wiki, Socials, Tryout, Challenges, Teams, Roles models, 
+#TODO Add Delivery, Tag, Rollout, Training, Environment Model
 #TODO add the notification feature
 
 

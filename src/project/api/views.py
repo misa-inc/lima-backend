@@ -75,25 +75,32 @@ class CreateProjectView(CreateAPIView):
         avatar = request.data.get("avatar")
         cover = request.data.get("cover")
         name = request.data.get("name")
+        about = request.data.get("about")
+        code_of_conduct = request.data.get("code_of_conduct")
         description = request.data.get("description")
         project_type = request.data.get("project_type")
         category = request.data.get("category")
         username = request.data.get("username")
+        directory_id = request.data.get("directory_id")
+        directory = get_object_or_404(Directory, id=directory_id)
         creator = get_object_or_404(User, username=username)
 
         with transaction.atomic():
-            Project = Project.objects.create(
+            project = Project.objects.create(
                 creator=creator, 
                 name=name, 
+                directory=directory,
                 project_type=project_type, 
                 category=category, 
                 avatar=avatar, 
                 cover=cover, 
-                description=description
+                description=description,
+                about=about,
+                code_of_conduct=code_of_conduct
             )
-        d = ProjectSerializer(Project).data
+        d = ProjectSerializer(project).data
         return Response({
-                "success": "Your project has been created successfully.",
+                "success": d,
             }, status=status.HTTP_201_CREATED)
 
 

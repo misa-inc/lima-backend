@@ -1,5 +1,5 @@
 from django.db import models
-from django.utils.translation import ugettext as _
+#from django.utils.translation import ugettext as _
 
 from datetime import date, datetime
 from django.utils import timezone

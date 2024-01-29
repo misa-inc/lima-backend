@@ -1,6 +1,5 @@
 import jwt
 import os
-import requests
 import random
 import string
 import re

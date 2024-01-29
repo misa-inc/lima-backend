@@ -37,6 +37,8 @@ from django.db.models import Count
 from .serializers import *
 from trivia.models import *
 from account.models import User
+from page.models import *
+from directory.models import *
 from extensions.pagination import CustomPagination
 from notifications.models import Notification
 
@@ -76,6 +78,10 @@ class CreateTriviaView(CreateAPIView):
         title = request.data.get("title")
         description = request.data.get("description")
         trivia_type = request.data.get("trivia_type")
+        page_id = request.data.get("page_id")
+        directory_id = request.data.get("directory_id")
+        page = get_object_or_404(Page,id=page_id)
+        directory = get_object_or_404(Directory,id=directory_id)
         author = request.user
 
         with transaction.atomic():
@@ -87,6 +93,8 @@ class CreateTriviaView(CreateAPIView):
                     description = description,
                     trivia_type = trivia_type,
                     author=author,
+                    page=page,
+                    directory=directory
                 )      
         d = TriviaSerializer(trivia).data
         return Response(d, status=status.HTTP_201_CREATED)
@@ -241,10 +249,10 @@ def VoteOnTrivia(request):
 
         if value == 1:
             Notification.objects.get_or_create(
-                notification_type="VP",
+                notification_type="L",
                 trivia=trivia,
                 comments=(
-                    f"Go see your trivia “{trivia.description[:10]}...”"
+                    f"@{voter.username} likes your trivia “{trivia.description[:10]}...”"
                 ),
                 to_user=trivia.author,
                 from_user=voter,
@@ -377,26 +385,26 @@ class CreateCommentView(CreateAPIView):
             )
             trivia.comments = trivia.comments + 1
             trivia.save()
-        if parent_comment_id and Comment.objects.get(pk=parent_comment_id):
-            Notification.objects.get_or_create(
-                notification_type="CS",
-                comment=Comment.objects.get(pk=parent_comment_id),
-                comments=(
-                    f"@{author.username} replied to your comment"
-                ),
-                to_user=Comment.objects.get(pk=parent_comment_id).author,
-                from_user=author,
-            )
-        else:
-            Notification.objects.get_or_create(
-                notification_type="P",
-                trivia=trivia,
-                comments=(
-                    f"@{author.username} commented on your trivia"
-                ),
-                to_user=trivia.author,
-                from_user=author,
-            )
+        #if parent_comment_id and Comment.objects.get(pk=parent_comment_id):
+           # Notification.objects.get_or_create(
+              #  notification_type="C",
+                #comment=Comment.objects.get(pk=parent_comment_id),
+                #comments=(
+                #    f"@{author.username} replied to your comment"
+                #),
+                #to_user=Comment.objects.get(pk=parent_comment_id).author,
+                #from_user=author,
+            #)
+        #else:
+            #Notification.objects.get_or_create(
+                #notification_type="C",
+                #trivia=trivia,
+                #comments=(
+                #    f"@{author.username} commented on your trivia"
+                #),
+                #to_user=trivia.author,
+                #from_user=author,
+            #) 
 
         d = CommentSerializer(comment).data
         return Response(d, status=status.HTTP_201_CREATED)
@@ -430,16 +438,6 @@ def VoteOnComment(request):
         value = request.data.get("value")
         comment = get_object_or_404(Comment, id=comment_id)
 
-        if value == 1:
-            Notification.objects.get_or_create(
-                notification_type="VC",
-                comment=comment,
-                comments=(
-                    f"Go see your comment on {comment.trivia.description[:10]}...”"
-                ),
-                to_user=comment.author,
-                from_user=voter,
-            )
         try:
             vote = Vote.objects.get(voter=voter, comment=comment)
         except Vote.DoesNotExist:

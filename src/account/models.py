@@ -6,6 +6,7 @@ from extensions.utils import MONTH as month
 from directory.models import Directory
 from page.models import Page
 from project.models import Project
+from events.models import *
 
 from django.contrib.auth.models import PermissionsMixin, AbstractBaseUser, BaseUserManager
 from django.utils.translation import gettext as _
@@ -17,6 +18,7 @@ from django.db import models
 
 from datetime import date
 from rest_framework_simplejwt.tokens import RefreshToken
+from taggit.managers import TaggableManager
 
 from .managers import CustomUserManager
 
@@ -27,6 +29,10 @@ def upload_to(instance, filename):
 
 def upload_for(instance, filename):
     return "covers/{0}/{1}".format(instance.username, filename)
+
+def badge_to(instance, filename):
+    return "badges/{0}/{1}".format(instance.user.username, filename)
+
 
 
 def add_user_util(instance):
@@ -70,6 +76,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     address = models.CharField(max_length=1000, null=True, blank=True)
     city = models.CharField(max_length=1000, null=True, blank=True)
     location = models.CharField(max_length=1000, null=True, blank=True)
+    total_streak = models.IntegerField(null=True, blank=True)
+    total_aura = models.IntegerField(null=True, blank=True)
     day = models.CharField(max_length=3, null=True, blank=True)
     month = models.CharField(max_length=15, null=True, blank=True)
     year = models.CharField(max_length=7, null=True, blank=True)
@@ -77,6 +85,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     dob = models.CharField(max_length=1000, null=True, blank=True)
     friends = models.ManyToManyField("self", related_name="user_friends", blank=True, symmetrical=False)
     blocked = models.ManyToManyField("self", related_name="user_blocked", blank=True, symmetrical=False)
+    open_to_work = models.BooleanField(default=False)
+    open_to_collaborate = models.BooleanField(default=False)
     author = models.BooleanField(
         default=False, blank=True, 
         verbose_name=_("author"),
@@ -102,6 +112,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     tos = models.BooleanField(default=False)
     created = models.CharField(max_length=1000, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
+
+    tags = TaggableManager()
 
     objects = CustomUserManager()
 
@@ -148,6 +160,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_project_moderator(self):
         return Project.objects.filter(moderators=self)
+
+    @property
+    def is_event_member(self):
+        return Event.objects.filter(guests=self)
 
     @display(
         boolean=True,
@@ -216,10 +232,6 @@ class Education(models.Model):
         User, on_delete=models.CASCADE,
         related_name="educations", verbose_name=_("User"),
     )
-    company = models.CharField(
-        max_length=20, null=True, 
-        blank=True, verbose_name=_("Company"),
-    )
     duration = models.CharField(max_length=300, blank=True, null=True)
     school = models.CharField(max_length=300, blank=True, null=True)
     address = models.CharField(max_length=10000, blank=True, null=True)
@@ -246,16 +258,40 @@ class Education(models.Model):
         verbose_name = _("Education")
         verbose_name_plural = _("Educations")
 
-
-class Recommendation(models.Model):
+#Record model is a multiple of status by time by score (if its game etc) Minor = 2 and Major = 4
+class Record(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name="recommendations", verbose_name=_("User"),
+        related_name="records", verbose_name=_("User"),
     )
-    recommender = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name="recommender", verbose_name=_("Recommender"),
-    )
+    aura = models.CharField(max_length=30000, blank=True, null=True)
+    posts = models.ForeignKey(
+        'post.Post', on_delete=models.CASCADE, related_name="record_posts", blank=True, default=None
+    )#Answering in QnA's, Quizzes, Polls (Minor) --- DONE
+    events = models.ForeignKey(
+        'events.Event', on_delete=models.CASCADE, related_name="record_events", blank=True, default=None
+    )#TODO Participating and attending a competitions (Major), sessions, webinar, meetup, tune (Minor) --- This will be done at the frontend
+    publication = models.ForeignKey(
+        'blog.Blog', on_delete=models.CASCADE, related_name="record_publication", blank=True, default=None
+    )#TODO Reading a Blog (Minor) --- This will be done at the frontend
+    books = models.ForeignKey(
+        'library.Book', on_delete=models.CASCADE, related_name="record_books", blank=True, default=None
+    )#TODO Reading or listening to a book (Minor) --- This will be done at the frontend
+    directories = models.ForeignKey(
+        'directory.Directory', on_delete=models.CASCADE, related_name="record_directories", blank=True, default=None
+    )#TODO Participating in a directory by making requests, deliveries, going through and completing a Branch Environment (Major)
+    projects = models.ForeignKey(
+        'project.Project', on_delete=models.CASCADE, related_name="record_project", blank=True, default=None
+    )#TODO Participating in a directory by making requests, deliveries (Major)
+    discussions = models.ForeignKey(
+        'discussion.Discussion', on_delete=models.CASCADE, related_name="record_discussions", blank=True, default=None
+    )#Participing in a directory discussion by asking or answering in it (Minor) --- DONE
+    #TODO Pariticpating in Tryout (Major) --- This will be done at the frontend
+    #TODO Pariticpating in Challenges (Major) --- This will be done at the frontend
+    #TODO Participating in Games (Major) --- This will be done at the frontend
+    time = models.CharField(max_length=100000, blank=True, null=True)#Time in seconds that a user did some record
+    type = models.CharField(max_length=300, blank=True, null=True)#Is it a Major or a Minor record
+    status = models.CharField(max_length=300, blank=True, null=True)#Is it a ongoing or closed
     description = models.TextField(verbose_name=_("Description"),)
     is_deleted = models.BooleanField(default=False)
     create = models.DateTimeField(
@@ -272,6 +308,24 @@ class Recommendation(models.Model):
         ordering = [
             "-create", "-id",
         ]
-        verbose_name = _("Recommender")
-        verbose_name_plural = _("Recommenders")
+        verbose_name = _("Record")
+        verbose_name_plural = _("Records")
 
+
+class Badge(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, default=None)
+    image = models.ImageField(
+        upload_to=badge_to, blank=True, null=True, max_length=100000
+    )
+    title = models.CharField(max_length=300)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.user.username
+
+    class Meta:
+        ordering = [
+            "-last_modified", "-id",
+        ]
+        verbose_name = _("Badge")
+        verbose_name_plural = _("Badges")

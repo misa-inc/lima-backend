@@ -40,7 +40,7 @@ from account.models import User
 from extensions.pagination import CustomPagination
 from notifications.models import Notification
 
-from rest_framework import viewsets, exceptions
+from rest_framework import viewsets, exceptions, generics
 from rest_framework.response import Response
 from rest_framework.generics import *
 from rest_framework.permissions import *
@@ -49,15 +49,15 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.renderers import JSONRenderer
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import (
-    RetrieveUpdateAPIView,
     CreateAPIView,
     ListAPIView,
     UpdateAPIView,
-    RetrieveAPIView,
-    DestroyAPIView,
+    RetrieveUpdateDestroyAPIView,
+    ListCreateAPIView
 )
 
 # TODO Add Lima Aura as the gift users get from posting, commenting and voting

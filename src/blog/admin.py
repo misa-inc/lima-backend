@@ -16,15 +16,12 @@ class BlogAdmin(admin.ModelAdmin):
         'category__title',
     )
     list_filter = (
-        'status', 'special', 
+        'special', 
         'publish',
     )
     exclude = (
         "slug",
     )
-    radio_fields = {
-        "status": admin.HORIZONTAL
-    }
     list_per_page = 25
 
 

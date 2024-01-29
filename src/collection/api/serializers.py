@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from collection.models import *
+from taggit.serializers import (TagListSerializerField,
+                                TaggitSerializer)
 
 from account.models import User
 
@@ -22,6 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CollectionDetailSerializer(serializers.ModelSerializer):
+    tags = TagListSerializerField(default=[])
 
     class Meta:
         model = Collection
@@ -31,6 +34,7 @@ class CollectionDetailSerializer(serializers.ModelSerializer):
             "description",
             "day",
             "month",
+            "tags"
             "year",
             "collection_type",
             "posts",

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from page.models import *
+from taggit.serializers import (TagListSerializerField,
+                                TaggitSerializer)
 
 from account.models import User
 from account.api.serializers import UserLessInfoSerializer
@@ -22,7 +24,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ("username",)
 
 
-class PageDetailSerializer(serializers.ModelSerializer):
+class PageDetailSerializer(TaggitSerializer, serializers.ModelSerializer):
+    tags = TagListSerializerField(default=[])
 
     class Meta:
         model = Page
@@ -31,7 +34,19 @@ class PageDetailSerializer(serializers.ModelSerializer):
             "avatar",
             "cover",
             "name",
+            "about",
             "description",
+            "address",
+            "location",
+            "category",
+            "directories",
+            "projects",
+            "books",
+            "mobile",
+            "email",
+            "price",
+            "hours",
+            "tags",
             "day",
             "month",
             "year",
@@ -42,6 +57,7 @@ class PageDetailSerializer(serializers.ModelSerializer):
             "creator",
             "created",
             "subscriber_count",
+            "likes_count",
             "is_deleted",
             "slug",
             "numPosts",
@@ -65,15 +81,21 @@ class TextSerializer(serializers.ModelSerializer):
 class RuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rule
-        fields = ("id", "Page", "title", "text")
+        fields = ("id", "page", "title", "text")
 
 
 class LinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Link
-        fields = ("id", "Page", "image", "title", "url")
+        fields = ("id", "page", "image", "title", "url")
 
+
+class SocialSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Social
+        fields = ("id", "page", "title", "url")
 
 def voted(user, comment, value):
     return user.is_active and bool(user.vote_set.filter(comment=comment, value=value))
@@ -88,6 +110,17 @@ class RecursiveField(serializers.Serializer):
         serializer = self.parent.parent.__class__(instance, context=self.context)
         return serializer.data
 
+
+class ExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Experience
+        fields = "__all__"
+
+
+class EducationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Education
+        fields = "__all__"
 
 class PageCountSerializer(serializers.ModelSerializer):
     class Meta:

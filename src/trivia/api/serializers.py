@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from trivia.models import *
 
+from taggit.serializers import (TagListSerializerField,
+                                TaggitSerializer)
+
 from account.models import User
 from account.api.serializers import UserLessInfoSerializer
 
@@ -83,6 +86,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class TriviaSerializer_detailed(serializers.ModelSerializer):
+    tags = TagListSerializerField(default=[])
 
     class Meta:
         model = Trivia
@@ -92,6 +96,9 @@ class TriviaSerializer_detailed(serializers.ModelSerializer):
             "video",
             "created",
             "link",
+            "tags",
+            "page",
+            "directory",
             "trivia_type",
             "perpective",
             "category",

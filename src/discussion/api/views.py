@@ -58,8 +58,7 @@ from rest_framework.generics import (
     DestroyAPIView,
 )
 
-
-
+ 
 class CreateDiscussionView(CreateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = DiscussionSerializer
@@ -69,35 +68,51 @@ class CreateDiscussionView(CreateAPIView):
         avatar = request.data.get("avatar")
         cover = request.data.get("cover")
         discussion_name = request.data.get("discussion_name")
-        about = request.data.get("about")
         discussion_type = request.data.get("discussion_type")
         category = request.data.get("category")
+        category_id = request.data.get("category_id")
+        directory_id = request.data.get("directory_id")
+        is_request = request.data.get("is_request")
         username = request.data.get("username")
+        directory = get_object_or_404(Directory, id=directory_id)
+        category = get_object_or_404(Category, id=category_id)
         creator = get_object_or_404(User, username=username)
 
         with transaction.atomic():
-            discussion = Discussion.objects.create(
-                creator=creator, 
-                discussion_name=discussion_name, 
-                discussion_type=discussion_type, 
-                category=category, 
-                avatar=avatar, 
-                cover=cover, 
-                about=about
-            )
+            if is_request == "1":
+                discussion = Discussion.objects.create(
+                    creator=creator, 
+                    discussion_name=discussion_name, 
+                    discussion_type=discussion_type, 
+                    category=category, 
+                    directory=directory,
+                    avatar=avatar, 
+                    cover=cover,
+                    is_request=True 
+                )
+            else:
+                discussion = Discussion.objects.create(
+                    creator=creator, 
+                    discussion_name=discussion_name, 
+                    discussion_type=discussion_type, 
+                    category=category, 
+                    directory=directory,
+                    avatar=avatar, 
+                    cover=cover
+                )
         d = DiscussionSerializer(discussion).data
         return Response(d, status=status.HTTP_201_CREATED)
 
 
 class DiscussionDetailView(RetrieveAPIView):
-    lookup_field = "discussion_name"
+    lookup_field = "id"
     permission_classes = (IsAuthenticated,)
     serializer_class = DiscussionSerializer
     queryset = Discussion.objects.all()
 
 
 class DiscussionUpdateView(UpdateAPIView):
-    lookup_field = "discussion_name"
+    lookup_field = "id"
     permission_classes = (IsAuthenticated,)
     serializer_class = DiscussionSerializer
     queryset = Discussion.objects.all()
@@ -105,7 +120,7 @@ class DiscussionUpdateView(UpdateAPIView):
 
 
 class DiscussionDeleteView(DestroyAPIView):
-    lookup_field = "discussion_name"
+    lookup_field = "id"
     permission_classes = (IsAuthenticated,)
     serializer_class = DiscussionSerializer
     queryset = Discussion.objects.all()
@@ -222,12 +237,126 @@ def block_user_in_discussion(request):
         )
 
 
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def user_liked_discussion(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        discussion = get_object_or_404(Discussion, id=pk)
+        if request.user in discussion.liked_users.all():
+            liked = True
+        else:
+            liked = False
+        return Response(
+            {
+                "liked": liked,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def like_discussion(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        discussion = get_object_or_404(Discussion, id=pk)
+        if request.user in discussion.liked_users.all():
+            liked = False
+            discussion.liked_users.remove(request.user)
+            discussion.like_count = discussion.like_count - 1
+            discussion.save()
+        else:
+            liked = True
+            discussion.liked_users.add(request.user)
+            discussion.like_count = discussion.like_count + 1
+            discussion.save()
+        return Response(
+            {
+                "liked": liked,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def added_moderator(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        discussion = get_object_or_404(Discussion, id=pk)
+        if request.user in discussion.moderator_users.all():
+            added = True
+        else:
+            added = False
+        return Response(
+            {
+                "added": added,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def add_remove_moderator(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        moderator_id = request.data.get("moderator_id")
+        moderator = get_object_or_404(User, id=moderator_id)
+        discussion = get_object_or_404(Discussion, id=pk)
+        if moderator in discussion.moderator_users.all():
+            added = False
+            discussion.moderator_users.remove(moderator)
+            #discussion.subscriber_count = discussion.subscriber_count - 1
+            discussion.save()
+        else:
+            added = True
+            discussion.moderator_users.add(moderator)
+            #discussion.subscriber_count = discussion.subscriber_count + 1
+            discussion.save()
+        return Response(
+            {
+                "added": added,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def add_remove_project(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        project_id = request.data.get("project_id")
+        project = get_object_or_404(Project, id=project_id)
+        discussion = get_object_or_404(Discussion, id=pk)
+        if project in discussion.projects.all():
+            added = False
+            discussion.projects.remove(project)
+            #discussion.subscriber_count = discussion.subscriber_count - 1
+            discussion.save()
+        else:
+            added = True
+            discussion.projects.add(project)
+            #discussion.subscriber_count = discussion.subscriber_count + 1
+            discussion.save()
+        return Response(
+            {
+                "added": added,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class CreateBotView(CreateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = BotSerializer
+    parser_classes = (FormParser, MultiPartParser)
 
     def create(self, request, *args, **kwargs):
         file_name = request.data.get("file_name")
+        file = request.data.get("file")
         message_handler = request.data.get("message_handler")
         description = request.data.get("description")
         username = request.data.get("username")
@@ -236,7 +365,8 @@ class CreateBotView(CreateAPIView):
         with transaction.atomic():
             bot = Bot.objects.create(
                 user=user, 
-                file_name=file_name, 
+                file_name=file_name,
+                file=file,  
                 message_handler=message_handler, 
                 description=description
             )
@@ -245,24 +375,77 @@ class CreateBotView(CreateAPIView):
 
 
 class BotDetailView(RetrieveAPIView):
-    lookup_field = "file_name"
+    lookup_field = "id"
     permission_classes = (IsAuthenticated,)
     serializer_class = BotSerializer
     queryset = Bot.objects.all()
 
 
 class BotUpdateView(UpdateAPIView):
-    lookup_field = "file_name"
+    lookup_field = "id"
     permission_classes = (IsAuthenticated,)
     serializer_class = BotSerializer
     queryset = Bot.objects.all()
 
 
 class BotDeleteView(DestroyAPIView):
-    lookup_field = "file_name"
+    lookup_field = "id"
     permission_classes = (IsAuthenticated,)
     serializer_class = BotSerializer
     queryset = Bot.objects.all()
+
+
+class CreateCategoryView(CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+
+    def create(self, request, *args, **kwargs):
+        avatar = request.data.get("avatar")
+        title = request.data.get("title")
+        description = request.data.get("description")
+        needs_answer = request.data.get("needs_answer")
+        directory_id = request.data.get("directory_id")
+        directory = get_object_or_404(Directory, directory_id=directory_id)
+
+        with transaction.atomic():
+            if needs_answer == "1":
+                category = Category.objects.create(
+                    directory=directory, 
+                    avatar=avatar, 
+                    title=title, 
+                    description=description,
+                    needs_answer=True
+                )
+            else:
+                category = Category.objects.create(
+                    directory=directory, 
+                    avatar=avatar, 
+                    title=title, 
+                    description=description
+                )    
+        d = CategorySerializer(category).data
+        return Response(d, status=status.HTTP_201_CREATED)
+
+
+class CategoryDetailView(RetrieveAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
+
+
+class CategoryUpdateView(UpdateAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
+
+
+class CategoryDeleteView(DestroyAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
 
 
 @api_view(['GET'])
@@ -285,7 +468,7 @@ def ListChatsOfDiscussion(request, id):
     paginator = CustomPagination()
     result_page = paginator.paginate_queryset(discussion_chats,request)
 
-    serializer = DiscussionSerializer(result_page, many=True, context={'request': request})
+    serializer = ChatSerializer(result_page, many=True, context={'request': request})
     return paginator.get_paginated_response({'data':serializer.data})    
 
 

@@ -12,7 +12,10 @@ from datetime import date
 from guardian.shortcuts import assign_perm
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
-# TODO Add more details to page
+#TODO Add Delivery, Tag, Rollout, Training, Environment, Branch, Wiki, Socials, Tryout, Challenges, Teams, Roles models, 
+#TODO add the notification feature
+
+
 
 
 def link_to(instance, filename):
@@ -112,7 +115,6 @@ class Text(models.Model):
     text = models.TextField(blank=True)
     last_modified = models.DateTimeField(auto_now=True)
 
-
 class Directory(models.Model):
     avatar = models.ImageField(
         upload_to=directory_to, blank=True, null=True, max_length=1000000
@@ -121,14 +123,25 @@ class Directory(models.Model):
         upload_to=directory_for, blank=True, null=True, max_length=1000000
     )
     name = models.CharField(max_length=250, unique=True)
+    about = models.TextField(blank=True, null=True, max_length=100000)
     description = models.TextField(blank=True, null=True, max_length=100000)
+    code_of_conduct = models.TextField(blank=True, null=True, max_length=100000)
     category = models.CharField(max_length=1000, null=True, blank=True)
     directory_type = models.CharField(max_length=100, null=True, blank=True)
     subscribers = models.ManyToManyField(
-        'account.User', related_name="page_subscribers", blank=True, default=None
+        'account.User', related_name="directory_subscribers", blank=True, default=None
     )
     moderators = models.ManyToManyField(
-        'account.User', related_name="page_moderators", blank=True, default=None
+        'account.User', related_name="directory_moderators", blank=True, default=None
+    )
+    pages = models.ManyToManyField(
+        'page.Page', related_name="directory_pages", blank=True, default=None
+    )
+    projects = models.ManyToManyField(
+        'project.Project', related_name="directory_projects", blank=True, default=None
+    )
+    books = models.ManyToManyField(
+        'library.Book', related_name="directory_books", blank=True, default=None
     )
     creator = models.ForeignKey('account.User', on_delete=models.CASCADE, related_name="directory_creator")
     created = models.DateTimeField(auto_now_add=True)
@@ -165,8 +178,9 @@ class Directory(models.Model):
         else:
             to_slug = str(self.name)
         self.slug = to_slug    
-        add_directory_util(self)
         super().save(*args, **kwargs)  
+        add_directory_util(self)
+        super().save(*args, **kwargs)
 
 
 class Link(models.Model):

@@ -156,7 +156,7 @@ def book_comments(request, book_id):
       return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(('POST',))
-def add_comment(request, book_id):
+def add_comment(request):
    if request.method == 'POST':
       serializer     = CommentSerializer(data=request.data)
       if serializer.is_valid():

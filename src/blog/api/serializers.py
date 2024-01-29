@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from taggit.serializers import (TagListSerializerField,
+                                TaggitSerializer)
 
 from blog.models import Blog, Comment
 
@@ -26,11 +28,13 @@ class BlogListSerializer(serializers.ModelSerializer):
             'create', 'body', 
             'status', 'updated', 
             'publish', 'visits', 
-            'special', 'category' 
+            'special', 'category', 
+            'directory', 'page' 
         ]
 
 
-class BlogCreateSerializer(serializers.ModelSerializer):
+class BlogCreateSerializer(TaggitSerializer, serializers.ModelSerializer):
+    tags = TagListSerializerField(default=[])
 
     class Meta:
         model = Blog
@@ -38,7 +42,8 @@ class BlogCreateSerializer(serializers.ModelSerializer):
             'title', 'body',
             'image', 'summary',
             'category', 'publish',
-            'special', 'status',
+            'special', 'status', 'tags',
+            'directory', 'page' 
         ]
 
 
@@ -82,6 +87,7 @@ class CommentListSerializer(serializers.ModelSerializer):
             "user", "name",
             "parent", "body",
             "create", "object_id",
+            'likes'
         ]
 
 
@@ -91,5 +97,6 @@ class CommentUpdateCreateSerializer(serializers.ModelSerializer):
         fields = [
             "object_id", "name",
             "parent", "body",
+            'likes'
         ]
 

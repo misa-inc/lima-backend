@@ -7,6 +7,7 @@ from datetime import datetime
 
 from asgiref.sync import sync_to_async
 import json, html, pytz
+from account.models import Record
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -111,16 +112,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"message":message,"sender":sender, 'date':date}))
 
     @database_sync_to_async
-    def save_message(self, text: str, file, user=None):
+    def save_message(self, text: str, first_chat: str, file, user=None):
         if not user:
             user = self.user 
         
         if user:
-            chat = Chat.objects.create(
-                from_user=user,
-                text=text,
-                file=file
+            if first_chat == "1":
+                chat = Chat.objects.create(
+                    from_user=user,
+                    text=text,
+                    file=file,
+                    first_chat=True
+                )
+            else:
+                chat = Chat.objects.create(
+                    from_user=user,
+                    text=text,
+                    file=file
+                )    
+            Record.objects.get_or_create(
+                user=user,
+                aura="6",
+                discussions=self.discussion_model,
+                time="3",
+                type="minor",
+                status="closed",
+                description=(f"You earned 6 aura by engaging in this discussion “{self.discussion_model.discussion_name[:7]}...”")
             )
+            user.total_aura = user.total_aura + 6
+            user.save()
             
             self.discussion_model.chat_set.add(chat)
 

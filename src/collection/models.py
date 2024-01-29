@@ -12,6 +12,7 @@ from datetime import date
 from guardian.shortcuts import assign_perm
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
+from taggit.managers import TaggableManager
 # TODO Add more details to page
 
 
@@ -117,9 +118,6 @@ class Collection(models.Model):
     trivias = models.ManyToManyField(
         'trivia.Trivia', related_name="trivias", blank=True, default=None
     )
-    competitions = models.ManyToManyField(
-        'events.Event', related_name="competitions", blank=True, default=None
-    )
     events = models.ManyToManyField(
         'events.Event', related_name="events", blank=True, default=None
     )
@@ -143,6 +141,7 @@ class Collection(models.Model):
     is_deleted = models.BooleanField(default=False)
     slug = models.SlugField(unique=True, blank=True, null=False, max_length=1000)
 
+    tags = TaggableManager()
     
     class Meta:
         ordering = ("-created",)

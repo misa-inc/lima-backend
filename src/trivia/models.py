@@ -7,11 +7,13 @@ from django.utils.text import slugify
 from django.utils import timezone
 from datetime import date
 
+from directory.models import Directory
+from page.models import Page
 
 from guardian.shortcuts import assign_perm
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
-# TODO Add more details to trivias, comments
+from taggit.managers import TaggableManager
 
 
 def link_to(instance, filename):
@@ -105,7 +107,7 @@ class DeletedUser(object):
         return self.username
 
 
-#TODO Add the all different types of trivias [Live + Quizzes] is left to be added
+#TODO Type Live Trivia is left to be added
 class Trivia(models.Model):
     attachment = models.ImageField(
         upload_to=trivia_to, blank=True, null=True, max_length=100000
@@ -132,6 +134,12 @@ class Trivia(models.Model):
     saved = models.ManyToManyField(
         'account.User', related_name="trivia_saved", blank=True, default=None
     )
+    page = models.ForeignKey(
+        Page, blank=True, null=True, on_delete=models.CASCADE, related_name="trivia_page"
+    )
+    directory = models.ForeignKey(
+        Directory, blank=True, null=True, on_delete=models.CASCADE, related_name="trivia_directory"
+    )
     share_count = models.IntegerField(blank=True, null=True, default=0)
     saved_count = models.IntegerField(blank=True, null=True, default=0)
     report_count = models.IntegerField(blank=True, null=True, default=0)
@@ -145,6 +153,8 @@ class Trivia(models.Model):
     votes = models.IntegerField(default=0)
     comments = models.IntegerField(default=0)
     slug = models.SlugField(blank=True, null=False, max_length=1000)
+
+    tags = TaggableManager()
 
     def get_author(self):
         if self.is_deleted:

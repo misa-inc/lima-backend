@@ -38,6 +38,8 @@ from .serializers import *
 from post.api.serializers import *
 from directory.models import *
 from post.models import *
+from library.models import *
+from project.models import *
 from account.models import User
 from extensions.pagination import CustomPagination
 from notifications.models import Notification
@@ -60,10 +62,12 @@ from rest_framework.generics import (
     UpdateAPIView,
     RetrieveAPIView,
     DestroyAPIView,
+    RetrieveUpdateDestroyAPIView
 )
+
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-# TODO Notifications automatically from the page you are part of
+# TODO Notifications automatically from the directory you are part of
 
 
 class CreateDirectoryView(CreateAPIView):
@@ -76,6 +80,8 @@ class CreateDirectoryView(CreateAPIView):
         cover = request.data.get("cover")
         name = request.data.get("name")
         description = request.data.get("description")
+        about = request.data.get("about")
+        code_of_conduct = request.data.get("code_of_conduct")
         directory_type = request.data.get("directory_type")
         category = request.data.get("category")
         username = request.data.get("username")
@@ -89,11 +95,13 @@ class CreateDirectoryView(CreateAPIView):
                 category=category, 
                 avatar=avatar, 
                 cover=cover, 
-                description=description
+                description=description,
+                about=about,
+                code_of_conduct=code_of_conduct
             )
         d = DirectorySerializer(directory).data
         return Response({
-                "success": "Your directory has been created successfully.",
+                "success": d,
             }, status=status.HTTP_201_CREATED)
 
 
@@ -180,6 +188,62 @@ def join_directory(request):
         return Response(
             {
                 "success": joined,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    return Response({
+                    "error": "There was an unforeseen error.",
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def add_or_remove_from_directory(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        page_pk = request.data.get("page_pk")
+        book_pk = request.data.get("book_pk")
+        project_pk = request.data.get("project_pk")
+        directory = get_object_or_404(Directory, id=pk)
+        page = get_object_or_404(Page, id=page_pk)
+        book = get_object_or_404(Book, id=book_pk)
+        project = get_object_or_404(Project, id=project_pk)
+        if page_pk:
+            if page in directory.pages.all():
+                added = False
+                directory.pages.remove(page)
+                #directory.pages_count = directory.pages_count - 1
+                directory.save()
+            else:
+                added = True
+                directory.pages.add(page)
+                #directory.pages_count = directory.pages_count + 1
+                directory.save()
+        if book_pk:
+            if book in directory.books.all():
+                added = False
+                directory.books.remove(book)
+                #directory.books_count = directory.books_count - 1
+                directory.save()
+            else:
+                added = True
+                directory.books.add(book)
+                #directory.books_count = directory.books_count + 1
+                directory.save() 
+        if project_pk:
+            if project in directory.projects.all():
+                added = False
+                directory.projects.remove(project)
+                #directory.projects_count = directory.projects_count - 1
+                directory.save()
+            else:
+                added = True
+                directory.projects.add(project)
+                #directory.projects_count = directory.projects_count + 1
+                directory.save()               
+        return Response(
+            {
+                "success": added,
             },
             status=status.HTTP_201_CREATED,
         )

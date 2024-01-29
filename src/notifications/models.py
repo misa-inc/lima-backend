@@ -3,7 +3,9 @@ from django.utils import timezone
 
 from account.models import User
 from post.models import Post, Comment
-#TODO find more TYPE_CHOICES like Mentions (everytime you get mentioned in a post or comment)
+from blog.models import Blog
+from trivia.models import Trivia
+#TODO find more TYPE_CHOICES like Mentions (everytime you get mentioned in a post or comment) and so on
 
 
 def pluralize(value, unit):
@@ -32,11 +34,9 @@ def time_ago(dt):
 class Notification(models.Model):
 
     TYPE_CHOICES = (
-        ('C', 'comment'),#Comments From your comment*
-        ('P', 'post'),#Comments From your post*
+        ('C', 'comment'),#Comments From your post, comment, blog, etc*
         ('RP', 'repost'),#reposts on your post*
-        ('VP', 'vote_post'),#votes on your post*
-        ('VC', 'vote_comment'),#votes on your comment*
+        ('L', 'like'),#likes on your post, blog, comment etc*
         ('F', 'follow'),#when someone follows you*
         ('UF', 'unfollow'),#when someone unfollows you*
         ('M', 'Message'),#when someone messages you
@@ -47,6 +47,8 @@ class Notification(models.Model):
     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='to')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='+', blank=True, null=True)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='+', blank=True, null=True)
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='+', blank=True, null=True)
+    trivia = models.ForeignKey(Trivia, on_delete=models.CASCADE, related_name='+', blank=True, null=True)
     notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     comments = models.TextField(null=True, blank=True)
     created = models.DateTimeField(default=timezone.now)

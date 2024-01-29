@@ -4,6 +4,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 
 from events.models import *
+from directory.models import *
+from page.models import *
+from project.models import *
 
 from events.api.serializers import *
 
@@ -67,7 +70,21 @@ class EventViewSet(viewsets.ModelViewSet):
         return Event.objects.filter(owner=user.id)
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        page_id = self.request.data.get("page_id")
+        directory_id = self.request.data.get("directory_id")
+        project_id = self.request.data.get("project_id")
+        directory = get_object_or_404(Directory, id=directory_id)
+        page = get_object_or_404(Page, id=page_id)
+        project = get_object_or_404(Project, id=project_id)
+        if page_id:
+            serializer.save(owner=self.request.user, page=page)
+        elif project_id:
+            serializer.save(owner=self.request.user, project=project)           
+        elif directory_id:
+            serializer.save(owner=self.request.user, directory=directory)
+        else:
+            serializer.save(owner=self.request.user)
+
 
 class FeedbackView(APIView):
     permission_classes = [IsAuthenticated]

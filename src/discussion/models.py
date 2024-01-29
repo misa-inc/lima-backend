@@ -6,7 +6,17 @@ import random, string , os
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
 from django.conf import settings
+from taggit.managers import TaggableManager
+from directory.models import Directory
+from project.models import Project
 
+#There are two types of discussion a normal lima discussion or a lima request
+
+def bot_to(instance, filename):
+    return "bots/{0}/{1}".format(instance.file_name, filename)
+
+def category_to(instance, filename):
+    return "categories/{0}/{1}".format(instance.title, filename)
 
 
 def discussion_to(instance, filename):
@@ -21,6 +31,28 @@ def file_to(instance, filename):
     return "discussions/{0}/{1}/{2}".format(instance.discussion.discussion_name, instance.from_user.username, filename)
 
 
+def pluralize(value, unit):
+    if value == 1:
+        return f'1{unit}'
+    return f'{value}{unit}'
+
+
+def time_ago(dt):
+    t = timezone.now() - dt
+    if t.days == 0:
+        if t.seconds < 60:
+            return 'just now'
+        if t.seconds < 3600:
+            return pluralize(t.seconds//60, 'm')
+        if t.seconds < 3600 * 24:
+            return pluralize(t.seconds//3600, 'h')
+    if t.days < 30:
+        return pluralize(t.days, 'd')
+    if t.days < 365:
+        return pluralize(t.days//30, 'mo')
+    return pluralize(t.days//365, 'yr')
+
+
 def add_discussion_util(instance):
     now = date.today()
     if not instance.month:
@@ -31,67 +63,12 @@ def add_discussion_util(instance):
         instance.save()
 
 
-def time_n_day_ago(instance):
-    now = datetime.now()
-    today = date.today()
-    current_hour = now.strftime("%H")
-    current_minutes = now.strftime("%M")
-    instance.day = today.day
-    instance.month = month[today.month]
-    instance.year = today.year
-    if current_hour == "01":
-        instance.time = f'1:{current_minutes} AM'
-    elif current_hour == "02":
-       instance.time = f'2:{current_minutes} AM'
-    elif current_hour == "03":
-       instance.time = f'3:{current_minutes} AM'
-    elif current_hour == "04":
-       instance.time = f'4:{current_minutes} AM'
-    elif current_hour == "05":
-       instance.time = f'5:{current_minutes} AM'
-    elif current_hour == "06":
-       instance.time = f'6:{current_minutes} AM'
-    elif current_hour == "07":
-       instance.time = f'7:{current_minutes} AM'
-    elif current_hour == "08":
-       instance.time = f'8:{current_minutes} AM'
-    elif current_hour == "09":
-       instance.time = f'9:{current_minutes} AM'
-    elif current_hour == "10":
-        instance.time = f'10:{current_minutes} AM'
-    elif current_hour == "11":
-        instance.time = f'11:{current_minutes} AM'
-    elif current_hour == "12":
-        instance.time = f'12:{current_minutes} PM'
-    elif current_hour == "13":
-       instance.time = f'1:{current_minutes} PM'
-    elif current_hour == "14":
-       instance.time = f'2:{current_minutes} PM'
-    elif current_hour == "15":
-       instance.time = f'3:{current_minutes} PM'
-    elif current_hour == "16":
-       instance.time = f'4:{current_minutes} PM'
-    elif current_hour == "17":
-       instance.time = f'5:{current_minutes} PM'
-    elif current_hour == "18":
-       instance.time = f'6:{current_minutes} PM'
-    elif current_hour == "19":
-       instance.time = f'7:{current_minutes} PM'
-    elif current_hour == "20":
-       instance.time = f'8:{current_minutes} PM'
-    elif current_hour == "21":
-       instance.time = f'9:{current_minutes} PM'
-    elif current_hour == "22":
-        instance.time = f'10:{current_minutes} PM'
-    elif current_hour == "23":
-        instance.time = f'11:{current_minutes} PM'
-    else:
-        instance.time = f'12:{current_minutes} AM'
-
-
 class Bot(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    file_name = models.CharField(max_length=33)
+    file_name = models.CharField(max_length=33)#Bot name actually
+    file = models.FileField(
+        upload_to=bot_to, blank=True, null=True, max_length=1000000
+    )
     message_handler = models.CharField(max_length=255)
     description = models.CharField(max_length=255, null=True)
 
@@ -103,6 +80,22 @@ class Bot(models.Model):
         if dirname:
             self.file_name = self.file_name.replace(dirname,'').replace('/','')
         return super().save(*args, **kwargs)
+
+
+class Category(models.Model):
+    avatar = models.ImageField(
+        upload_to=category_to, blank=True, null=True, max_length=1000000
+    )
+    directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='discussiom_category_set', null=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True,null=True)
+    needs_answer = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        return super().save(*args, **kwargs)
+
+    def __repr__(self):
+        return '<title:{}'.format(self.title)    
 
 
 class Discussion(models.Model):
@@ -117,16 +110,27 @@ class Discussion(models.Model):
     day = models.CharField(max_length=1000, null=True, blank=True)
     month = models.CharField(max_length=1000, null=True, blank=True)
     year = models.CharField(max_length=1000, null=True, blank=True)
-    about = models.TextField(blank=True, null=True, max_length=100000)
+    directory = models.ForeignKey(Directory, on_delete=models.CASCADE, null=True)
+    projects = models.ManyToManyField(Project, related_name='project_discussion_set')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     blocked_users = models.ManyToManyField(User, related_name='blocked_users_set')
-    subscribed_users = models.ManyToManyField(User, related_name='subscribed_users_set')
+    liked_users = models.ManyToManyField(User, related_name='liked_users_set')
+    subscribed_users = models.ManyToManyField(User, related_name='subscribed_users_set')#TODO Make it so that users who subscribe can recieve notifications in the future
     moderator_users = models.ManyToManyField(User, related_name='moderator_users_set')
     subscriber_count = models.IntegerField(blank=True, null=True, default=0)
-    category = models.CharField(max_length=1000, null=True, blank=True)
+    like_count = models.IntegerField(blank=True, null=True, default=0)
+    category = models.ForeignKey(Category, related_name='discussion_category', on_delete=models.CASCADE, null=True)
     discussion_type = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)#Its either Open or Closed
     share_count = models.IntegerField(blank=True, null=True, default=0)
+    is_request = models.BooleanField(default=False)
+    answered = models.BooleanField(default=False)
     active_bots = models.ManyToManyField(Bot) 
+    #TODO Add Delivery manytomanyfield
+    #TODO Add Branch manytomanyfield
+    #TODO Add Milestone manytomanyfield
+
+    labels = TaggableManager()
 
     def save(self, discussion_code=True, *args, **kwargs):
         if not discussion_code:
@@ -167,14 +171,19 @@ class Chat(models.Model):
     from_user = models.ForeignKey(User, on_delete=models.CASCADE)
     text = models.TextField(null=False)
     created = models.DateTimeField(default=timezone.now)
+    liked_users = models.ManyToManyField(User, related_name='liked_chats_set')
     day = models.CharField(max_length=3, null=True, blank=True)
     month = models.CharField(max_length=15, null=True, blank=True)
     year = models.CharField(max_length=7, null=True, blank=True)
     time = models.CharField(max_length=15, null=True, blank=True)
-    
+    first_chat = models.BooleanField(default=False)
+
+    @property
+    def created_time_ago(self):
+        return time_ago(self.created)    
+
     def __repr__(self):
         return '<from_user:{}'.format(self.from_user.username)
     
     def save(self, *args, **kwargs):
-        time_n_day_ago(self)
         super().save(*args, **kwargs)

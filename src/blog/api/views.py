@@ -6,12 +6,18 @@ from rest_framework.generics import (
     CreateAPIView,
     RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
+from directory.models import *
+from page.models import *
 from blog.models import Blog, Comment
+from notifications.models import Notification
+from account.models import Record
 from .serializers import (
     BlogListSerializer,
     BlogCreateSerializer,
@@ -19,7 +25,7 @@ from .serializers import (
     CommentListSerializer,
     CommentUpdateCreateSerializer,
 )
-from permissions import (
+from extensions.permissions import (
     IsSuperUserOrAuthor,
     IsSuperUserOrAuthorOrReadOnly,
 )
@@ -33,7 +39,7 @@ class BlogList(ListAPIView):
 
     serializer_class = BlogListSerializer
     filterset_fields = [
-        "category", "special",
+        "category", "special", "topics"
     ]
     search_fields = [
         "title", "summary",
@@ -53,21 +59,57 @@ class BlogCreate(CreateAPIView):
         Creates a new post instance. Returns created post data.
 
         parameters: [title,   body,    image,   summary, 
-                    category, publish, special, status,]
+                    category, special, status, page, directory]
     """
 
     serializer_class = BlogCreateSerializer
     permission_classes = [IsSuperUserOrAuthor,]
-    queryset = Blog.objects.all()
+    parser_classes = (FormParser, MultiPartParser)
 
-    def perform_create(self, serializer):
-        if not self.request.user.is_superuser:
-            return serializer.save(
-                author=self.request.user,
-                status='d',
-                special=False,
+    def create(self, request, *args, **kwargs):
+        title = request.data.get("title")
+        directory_id = request.data.get("directory_id")
+        page_id = request.data.get("page_id")
+        image = request.data.get("image")
+        summary = request.data.get("summary")
+        category = request.data.get("category")
+        status = request.data.get("status")
+        directory = get_object_or_404(Directory, id=directory_id)
+        page = get_object_or_404(Page, id=page_id)
+        author = request.user
+
+        with transaction.atomic():
+            if directory_id:
+                blog = Blog.objects.create(
+                    title=title,
+                    image=image,
+                    summary=summary,
+                    category=category,
+                    author=author,
+                    directory=directory,
+                    status=status,
                 )
-        return serializer.save(author=self.request.user)
+            elif page_id:
+                blog = Blog.objects.create(
+                    title=title,
+                    image=image,
+                    summary=summary,
+                    category=category,
+                    author=author,
+                    page=page,
+                    status=status,
+                )  
+            else:
+                blog = Blog.objects.create(
+                    title=title,
+                    image=image,
+                    summary=summary,
+                    category=category,
+                    author=author,
+                    status=status,
+                )      
+        d = BlogCreateSerializer(blog).data
+        return Response(d, status=status.HTTP_201_CREATED)
 
 
 class BlogDetailUpdateDelete(RetrieveUpdateDestroyAPIView):
@@ -94,19 +136,13 @@ class BlogDetailUpdateDelete(RetrieveUpdateDestroyAPIView):
         return Blog.objects.publish()
 
     def perform_update(self, serializer):
-        if not self.request.user.is_superuser:
-            return serializer.save(
-                author=self.request.user,
-                status='d',
-                special=False,
-                )
         return serializer.save()
 
 
 class LikeBlog(APIView):
     """
     get:
-        Likes the desired note.
+        Likes the desired blog.
 
         parameters = [pk]
     """
@@ -117,13 +153,20 @@ class LikeBlog(APIView):
 
     def get(self, request, pk):
         user = request.user
-        note = get_object_or_404(Blog, pk=pk, status='p')
+        blog = get_object_or_404(Blog, pk=pk, status='p')
 
-        if user in note.likes.all():
-            note.likes.remove(user)
-
+        if user in blog.likes.all():
+            blog.likes.remove(user)
+            
         else:
-            note.likes.add(user)
+            blog.likes.add(user)
+            Notification.objects.get_or_create(
+                notification_type="L",
+                comments=(f"@{user.username} likes your blog “{blog.title[:7]}...”"),
+                to_user=blog.author,
+                from_user=user,
+                blog=blog
+            )
         
         return Response(
             {
@@ -131,7 +174,25 @@ class LikeBlog(APIView):
             },
             status=200,
         )
-    
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def user_likes_blog(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        blog = get_object_or_404(Blog, id=pk)
+        if request.user in blog.likes.all():
+            likes = True
+        else:
+            likes = False
+        return Response(
+            {
+                "likes": likes,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 class CommentsList(APIView):
     """
@@ -232,3 +293,50 @@ class CommentUpdateDelete(APIView):
             status=status.HTTP_204_NO_CONTENT,            
         )
 
+
+class LikeComment(APIView):
+    """
+    get:
+        Likes the desired comment.
+
+        parameters = [pk]
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    def get(self, request, pk):
+        user = request.user
+        comment = get_object_or_404(Comment, pk=pk)
+
+        if user in comment.likes.all():
+            comment.likes.remove(user)
+
+        else:
+            comment.likes.add(user)
+        
+        return Response(
+            {
+                "success" : "Your request was successful.",
+            },
+            status=200,
+        )
+
+
+@api_view(["POST"])
+@permission_classes((IsAuthenticated,))
+def user_likes_comment(request):
+    if request.method == "POST":
+        pk = request.data.get("pk")
+        comment = get_object_or_404(Comment, id=pk)
+        if request.user in comment.likes.all():
+            likes = True
+        else:
+            likes = False
+        return Response(
+            {
+                "likes": likes,
+            },
+            status=status.HTTP_200_OK,
+        )

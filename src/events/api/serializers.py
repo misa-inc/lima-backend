@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from taggit.serializers import (TagListSerializerField,
+                                TaggitSerializer)
 
 from events.models import *
 
@@ -6,6 +8,8 @@ from account.api.serializers import UserSerializer
 
 
 class EventSerializer(serializers.ModelSerializer):
+    tags = TagListSerializerField(default=[])
+
     class Meta:
         model = Event
         fields = '__all__'

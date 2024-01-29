@@ -7,14 +7,12 @@ from django.db import models
 
 from extensions.utils import upload_file_path
 from account.models import User
+from taggit.managers import TaggableManager
 
 from .managers import BlogManager,  CommentManager
 
 
 # Create your models here.
-
-
-
 class Blog(models.Model):
     STATUS_CHOICES = (
         ("p", "publish"),
@@ -26,9 +24,10 @@ class Blog(models.Model):
         blank=False, related_name="blogs",
         verbose_name=_("Author"),
     )
+    page = models.ForeignKey('page.Page', on_delete=models.CASCADE, related_name="page_blog", null=True, blank=True)
+    directory = models.ForeignKey('directory.Directory', on_delete=models.CASCADE, related_name="directory_blog", null=True, blank=True)
     category = models.CharField(max_length=300, blank=True, null=True)
     perspective = models.CharField(max_length=300, blank=True, null=True)
-    body = models.TextField(verbose_name=_("Body"),)
     is_deleted = models.BooleanField(default=False)
     is_reviewed = models.BooleanField(default=False)
     has_perspective = models.BooleanField(default=False)
@@ -66,12 +65,12 @@ class Blog(models.Model):
         default=False, verbose_name=_("Is special Blog ?"),
     )
     status = models.CharField(
-        max_length=1, choices=STATUS_CHOICES, 
-        verbose_name=_("Status"),
+        max_length=1, verbose_name=_("Status"),
     )
     visits = models.PositiveIntegerField(
         default=0, verbose_name=_("Visits"),
     )
+    tags = TaggableManager()
 
     def __str__(self):
         return f"{self.author.first_name} {self.title}"
@@ -103,6 +102,10 @@ class Comment(models.Model):
         "self", on_delete=models.CASCADE,
         related_name="children", null=True,
         blank=True, verbose_name=_("parent"),
+    )
+    likes = models.ManyToManyField(
+        User, blank=True,
+        related_name="comments_like", verbose_name=_("Likes"),
     )
     category = models.CharField(max_length=300, blank=True, null=True)
     perspective = models.CharField(max_length=300, blank=True, null=True)

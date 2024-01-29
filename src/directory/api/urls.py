@@ -16,6 +16,7 @@ urlpatterns = [
     path('directory/<str:name>/rules/', ListRulesOfDirectory.as_view(), name='directories_rules'),
     path("join/directory/", join_directory, name="join_directory"),
     path('user/joined/directory/', user_joined_directory, name='user_joined_directory'),
+    path('add/remove/from/directory/', add_or_remove_from_directory, name='add_or_remove_from_directory'),
     path('user/<str:username>/creator/directories/', ListDirectoriesOfUser.as_view(), name='creator_directories'),
     path('user/moderator/directories/', ListDirectoriesUserIsModerator.as_view(), name='moderator_directories'),
     path('user/joined/directories/', ListDirectoriesUserIsJoined.as_view(), name='joined_directories'),

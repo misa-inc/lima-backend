@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ListPagesUserIsJoined, ListPagesUserIsModerator, RuleDeleteView, LinkDeleteView, CreateRuleView, CreateLinkView, ListRulesOfPage, ListLinksOfPage, user_joined_page, PageDeleteView, PageUpdateView, PageDetailView, CreatePageView, ListPagesOfUser, join_page, ListPostsOfPage, DetailPostOfPage
+from .views import *
 
 
 urlpatterns = [
@@ -7,15 +7,31 @@ urlpatterns = [
     path('page/create/', CreatePageView.as_view(), name='create_page'),    
     path('page/create/link/', CreateLinkView.as_view(), name='create_link'),
     path('page/create/rule/', CreateRuleView.as_view(), name='create_rule'),
+    path('page/create/social/', CreateSocialView.as_view(), name='create_social'),
     path('page/link/<int:id>/delete/', LinkDeleteView.as_view(), name='delete_link'),
     path('page/rule/<int:id>/delete/', RuleDeleteView.as_view(), name='delete_rule'),
+    path('page/social/<int:id>/delete/', SocialDeleteView.as_view(), name='delete_social'),
     path('page/<str:name>/retrieve/', PageDetailView.as_view(), name='retrieve_page'),
     path('page/<str:name>/update/', PageUpdateView.as_view(), name='update_page'),
     path('page/<str:name>/delete/', PageDeleteView.as_view(), name='delete_page'),
     path('page/<str:name>/links/', ListLinksOfPage.as_view(), name='pages_links'),
     path('page/<str:name>/rules/', ListRulesOfPage.as_view(), name='pages_rules'),
+    path('page/<str:name>/socials/', ListSocialsOfPage.as_view(), name='pages_socials'),
+    path('page/<str:name>/educations/', ListEducationsOfPage.as_view(), name='pages_educations'),
+    path('page/<str:name>/experiences/', ListExperiencesOfPage.as_view(), name='pages_experiences'),
+    path("page/create/education/", CreateEducationView.as_view(), name="create-education"),
+    path("page/create/experience/", CreateExperienceView.as_view(), name="create-experience"),
+    path("page/experience/update/<id>/", ExperienceUpdateView.as_view(), name="experience-update"),
+    path("page/experience/delete/<id>/", ExperienceDeleteView.as_view(), name="experience-delete"),
+    path("page/education/update/<id>/", EducationUpdateView.as_view(), name="education-update"),
+    path("page/education/delete/<id>/", EducationDeleteView.as_view(), name="education-delete"),
+    path("page/experience/retrieve/<id>/", ExperienceDetailView.as_view(), name="experience-detail"),
+    path("page/education/retrieve/<id>/", EducationDetailView.as_view(), name="education-detail"),
     path("join/page/", join_page, name="join_page"),
     path('user/joined/page/', user_joined_page, name='user_joined_page'),
+    path("likes/page/", likes_page, name="likes_page"),
+    path('user/likes/page/', user_likes_page, name='user_likes_page'),
+    path('add/remove/from/page/', add_or_remove_from_page, name='add_or_remove_from_page'),
     path('user/<str:username>/creator/pages/', ListPagesOfUser.as_view(), name='creator_pages'),
     path('user/moderator/pages/', ListPagesUserIsModerator.as_view(), name='moderator_pages'),
     path('user/joined/pages/', ListPagesUserIsJoined.as_view(), name='joined_pages'),

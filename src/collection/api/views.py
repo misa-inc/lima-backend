@@ -43,6 +43,7 @@ from events.models import *
 from blog.models import *
 from library.models import *
 from directory.models import *
+from discussion.models import *
 from account.models import User
 from extensions.pagination import CustomPagination
 from notifications.models import Notification

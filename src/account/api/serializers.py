@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from taggit.serializers import (TagListSerializerField,
+                                TaggitSerializer)
 
-from account.models import User
+from account.models import *
 
 
 
@@ -219,7 +221,9 @@ class LogoutSerializer(serializers.Serializer):
             self.fail("bad_token")
 
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
+class UserSerializer(TaggitSerializer, serializers.HyperlinkedModelSerializer):
+    tags = TagListSerializerField(default=[])
+
     class Meta:
         model = User
         fields = (
@@ -227,8 +231,8 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
             "username",
             "email",
             "full_name", 
+            "tags",
             "headline",
-            
             "call_code",
             "phone",
             "author",
@@ -295,12 +299,37 @@ class UserLessInfoSerializer(serializers.ModelSerializer):
         fields = ["username", "full_name",  "avatar", "bio"]
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
+class ExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Experience
+        fields = "__all__"
+
+
+class EducationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Education
+        fields = "__all__"
+
+
+class RecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Record
+        fields = "__all__"
+
+
+class BadgeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Badge
+        fields = "__all__"
+
+
+class UserProfileSerializer(TaggitSerializer, serializers.ModelSerializer):
 
     friends_count = serializers.ReadOnlyField()
     blocked_count = serializers.ReadOnlyField()
     is_self = serializers.SerializerMethodField()
     blocked = serializers.SerializerMethodField()
+    tags = TagListSerializerField(default=[])
 
     class Meta:
         model = User
@@ -311,6 +340,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "full_name", 
             "headline",
             "call_code",
+            "tags",
             "phone",
             "author",
             "bio",
@@ -374,7 +404,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return False
 
 
-class ListUserSerializer(serializers.ModelSerializer):
+class ListUserSerializer(TaggitSerializer, serializers.ModelSerializer):
+    tags = TagListSerializerField(default=[])
 
     class Meta:
         model = User
@@ -384,6 +415,7 @@ class ListUserSerializer(serializers.ModelSerializer):
             "email",
             "full_name", 
             "headline",
+            "tags",
             "call_code",
             "author",
             "phone",

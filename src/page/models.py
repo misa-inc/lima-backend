@@ -7,12 +7,14 @@ from django.core.exceptions import FieldError
 from django.contrib.auth.models import Permission
 from django.utils.text import slugify
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from datetime import date
 
 from guardian.shortcuts import assign_perm
 from extensions.utils import get_random_code
 from extensions.utils import MONTH as month
-# TODO Add more details to page
+from taggit.managers import TaggableManager
+# TODO Add more details to page --- page apps & games, advanced settings
 
 
 def link_to(instance, filename):
@@ -121,24 +123,46 @@ class Page(models.Model):
         upload_to=page_for, blank=True, null=True, max_length=1000000
     )
     name = models.CharField(max_length=250, unique=True)
+    about = models.TextField(blank=True, null=True, max_length=100000)
     description = models.TextField(blank=True, null=True, max_length=100000)
+    address = models.TextField(blank=True, null=True, max_length=100000)
+    location = models.TextField(blank=True, null=True, max_length=100000)
     category = models.CharField(max_length=1000, null=True, blank=True)
+    mobile = models.CharField(max_length=1000, null=True, blank=True)
+    email = models.CharField(max_length=1000, null=True, blank=True)
+    price = models.CharField(max_length=1000, null=True, blank=True)
     page_type = models.CharField(max_length=100, null=True, blank=True)
+    likes = models.ManyToManyField(
+        'account.User', related_name="pages_likes", blank=True, default=None
+    )
     subscribers = models.ManyToManyField(
-        'account.User', related_name="subscribers", blank=True, default=None
+        'account.User', related_name="pages_subscribers", blank=True, default=None
     )
     moderators = models.ManyToManyField(
-        'account.User', related_name="moderators", blank=True, default=None
+        'account.User', related_name="pages_moderators", blank=True, default=None
+    )
+    directories = models.ManyToManyField(
+        'directory.directory', related_name="pages_directories", blank=True, default=None
+    )
+    projects = models.ManyToManyField(
+        'project.Project', related_name="pages_projects", blank=True, default=None
+    )
+    books = models.ManyToManyField(
+        'library.Book', related_name="pages_books", blank=True, default=None
     )
     creator = models.ForeignKey('account.User', on_delete=models.CASCADE, related_name="page_creator")
     created = models.DateTimeField(auto_now_add=True)
     day = models.CharField(max_length=1000, null=True, blank=True)
     month = models.CharField(max_length=1000, null=True, blank=True)
     year = models.CharField(max_length=1000, null=True, blank=True)
+    hours = models.CharField(max_length=1000, null=True, blank=True)
     subscriber_count = models.IntegerField(blank=True, null=True, default=0)
+    likes_count = models.IntegerField(blank=True, null=True, default=0)
     share_count = models.IntegerField(blank=True, null=True, default=0)
     is_deleted = models.BooleanField(default=False)
     slug = models.SlugField(unique=True, blank=True, null=False, max_length=1000)
+
+    tags = TaggableManager()
 
     @property
     def numPosts(self):
@@ -185,3 +209,76 @@ class Rule(models.Model):
     text = models.TextField(blank=True)
     last_modified = models.DateTimeField(auto_now=True)
 
+
+class Social(models.Model):
+    page = models.ForeignKey(Page, on_delete=models.CASCADE, blank=True, default=None)
+    title = models.CharField(max_length=300)
+    url = models.URLField(blank=True, max_length=2000)
+    last_modified = models.DateTimeField(auto_now=True)
+
+
+class Education(models.Model):
+    page = models.ForeignKey(
+        Page, on_delete=models.CASCADE,
+        related_name="pages_educations", verbose_name=_("Page"),
+    )
+    company = models.CharField(
+        max_length=20, null=True, 
+        blank=True, verbose_name=_("Company"),
+    )
+    duration = models.CharField(max_length=300, blank=True, null=True)
+    school = models.CharField(max_length=300, blank=True, null=True)
+    address = models.CharField(max_length=10000, blank=True, null=True)
+    location = models.CharField(max_length=10000, blank=True, null=True)
+    start_at = models.CharField(max_length=300, blank=True, null=True)
+    end_at = models.CharField(max_length=300, blank=True, null=True)
+    school_url = models.URLField(max_length=10000, blank=True, null=True)
+    description = models.TextField(verbose_name=_("Description"),)
+    is_deleted = models.BooleanField(default=False)
+    create = models.DateTimeField(
+        auto_now_add=True, verbose_name=_("Create time"),
+    )
+    updated = models.DateTimeField(
+        auto_now=True, verbose_name=_("Update time"),
+    )
+
+    def __str__(self):
+        return self.page.name
+
+    class Meta:
+        ordering = [
+            "-create", "-id",
+        ]
+        verbose_name = _("Education")
+        verbose_name_plural = _("Educations")
+
+
+class Experience(models.Model):
+    page = models.ForeignKey(
+        Page, on_delete=models.CASCADE,
+        related_name="pages_experiences", verbose_name=_("Page"),
+    )
+    company = models.CharField(
+        max_length=20, null=True, 
+        blank=True, verbose_name=_("Company"),
+    )
+    duration = models.CharField(max_length=300, blank=True, null=True)
+    title = models.CharField(max_length=300, blank=True, null=True)
+    description = models.TextField(verbose_name=_("Description"),)
+    is_deleted = models.BooleanField(default=False)
+    create = models.DateTimeField(
+        auto_now_add=True, verbose_name=_("Create time"),
+    )
+    updated = models.DateTimeField(
+        auto_now=True, verbose_name=_("Update time"),
+    )
+
+    def __str__(self):
+        return self.page.name
+
+    class Meta:
+        ordering = [
+            "-create", "-id",
+        ]
+        verbose_name = _("Experience")
+        verbose_name_plural = _("Experiences")

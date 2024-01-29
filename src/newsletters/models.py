@@ -5,6 +5,7 @@ from datetime import date, datetime
 from django.utils import timezone
 from extensions.utils import MONTH as month
 from account.models import User
+from taggit.managers import TaggableManager
 
 
 def file_to(instance, filename):
@@ -112,6 +113,8 @@ class Article(models.Model):
     month = models.CharField(max_length=15, null=True, blank=True)
     year = models.CharField(max_length=7, null=True, blank=True)
     time = models.CharField(max_length=15, null=True, blank=True)
+
+    tags = TaggableManager()
 
     def __str__(self):
         return self.name

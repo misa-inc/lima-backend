@@ -3,8 +3,9 @@ import datetime
 from django.db import models
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from taggit.managers import TaggableManager
 
-from account.models import User
+#from account.models import User
 
 #TODO Add more event fields as time goes on
 
@@ -23,17 +24,20 @@ class Event(models.Model):
     preview=models.ImageField(upload_to=event_for, blank=True, null=True, max_length=1000000)
     location_type=models.CharField(max_length=100,default="PHYSICAL")#PHYSICAL OR ONLINE
     type=models.CharField(max_length=100,default="PRIVATE")#PRIVATE OR PUBLIC
-    virtual_type=models.CharField(max_length=100,default="AUDIO")#AUDIO OR VIDEO CONFERENCE OR COMPETITION OR WEBINAR ETC
+    virtual_type=models.CharField(max_length=100,default="AUDIO")#AUDIO (Tune) OR VIDEO CONFERENCE (Meetup) OR COMPETITION OR WEBINAR OR Sessions  ETC
     code_adhesion=models.CharField(max_length=20,default="")
     challenge = models.TextField(blank=True)
     judging_criteria = models.TextField(blank=True)
     category=models.CharField(max_length=20000,default="")
-    owner=models.ForeignKey(User,on_delete=models.CASCADE)
-    start_date = models.DateTimeField(verbose_name="start_date",default=datetime.datetime.now())
-    end_date=models.DateTimeField(verbose_name="end_date", default=(timezone.now() + datetime.timedelta(hours=1)))
+    directory=models.ForeignKey('directory.Directory',on_delete=models.CASCADE, null=True, blank=True)
+    page=models.ForeignKey('page.Page',on_delete=models.CASCADE, null=True, blank=True)
+    project=models.ForeignKey('project.Project',on_delete=models.CASCADE, null=True, blank=True)
+    owner=models.ForeignKey('account.User',on_delete=models.CASCADE)
+    start_date = models.CharField(max_length=20000,default="")
+    end_date=models.CharField(max_length=20000,default="")
     end_date_inscription = models.DateTimeField(verbose_name="end_date_inscription")
     status=models.CharField(max_length=100,default="ACTIVE")#ACTIVE, CLOSED, 
-    guests = models.ManyToManyField(User, through='Guest',related_name="guests")
+    guests = models.ManyToManyField('account.User', through='Guest',related_name="guests")
     city = models.CharField(max_length=255,default="lima")
     county = models.CharField(max_length=255,default="lima")
     state = models.CharField(max_length=255,default="lima")
@@ -42,6 +46,8 @@ class Event(models.Model):
     latitude = models.FloatField(default=0.0)
     longitude = models.FloatField(default=0.0)
     is_active=models.BooleanField(default=True)
+
+    tags = TaggableManager()
 
     def __str__(self):
         return self.title
@@ -86,7 +92,7 @@ class Rule(models.Model):
 
 class Guest(models.Model):#Entrees
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('account.User', on_delete=models.CASCADE)
     status = models.CharField(max_length=255,default="STATUS")
     feedback = models.TextField(default="feedback")
     rating = models.PositiveSmallIntegerField(default=0)

@@ -31,11 +31,13 @@ from rest_framework.decorators import api_view, permission_classes
 
 from .serializers import (
     ListUserSerializer,
-    UserProfileSerializer,
-    UserProfileSerializer,
+    EducationSerializer,
+    ExperienceSerializer,
     RegisterSerializer,
     LogoutSerializer,
     LoginSerializer,
+    RecordSerializer,
+    BadgeSerializer,
     VerifyOTPRegisterSerializer,
     VerifyOTPLoginSerializer,
     VerifyOTPResetSerializer,
@@ -45,7 +47,7 @@ from .serializers import (
     ChangeTwoStepPasswordSerializer,
     GetTwoStepPasswordSerializer,
 )
-from account.models import User
+from account.models import *
 from extensions.utils import get_client_ip, Util
 from extensions.permissions import IsSuperUser
 from notifications.models import Notification
@@ -82,22 +84,22 @@ class RegisterView(generics.GenericAPIView):
             user_data["email"] = user.email
             user_data["username"] = user.username
             html_tpl_path = "email_templates/welcome.html"
-            html_intro_path = "email_templates/intro.html"
+            #html_intro_path = "email_templates/intro.html"
             context_data = {"name": user.username, "code": user.otp}
             email_html_template = get_template(html_tpl_path).render(context_data)
-            intro_html_template = get_template(html_intro_path).render(context_data)
+            #intro_html_template = get_template(html_intro_path).render(context_data)
             data = {
                 "email_body": email_html_template,
                 "to_email": user.email,
                 "email_subject": "Please verify your Lima email",
             }
-            intro = {
-                "email_body": intro_html_template,
-                "to_email": user.email,
-                "email_subject": "Welcome To Lima",
-            }
+            #intro = {
+            #    "email_body": intro_html_template,
+            #    "to_email": user.email,
+            #    "email_subject": "Welcome To Lima",
+            #}
             Util.send_email(data)
-            Util.send_email(intro)
+            #Util.send_email(intro)
             user.save()
             return Response(user_data, status=status.HTTP_201_CREATED)
 
@@ -441,13 +443,6 @@ def befriend_user(request):
             user.save()
             fu_user.friends.remove(user)
             fu_user.save()
-
-            Notification.objects.get_or_create(
-                notification_type="UF",
-                comments=(f"@{user.username} removed you from his friends list"),
-                to_user=fu_user,
-                from_user=user,
-            )
         else:
             friends = True
 
@@ -483,13 +478,6 @@ def accept_decline_friend_request(request):
 
         if status == "DECLINED":
             friends = False
-
-            Notification.objects.get_or_create(
-                notification_type="UF",
-                comments=(f"@{user.username} declined your friend request"),
-                to_user=fu_user,
-                from_user=user,
-            )
         else:
             friends = True
             fu_user.friends.add(user)
@@ -568,6 +556,91 @@ def block_user(request):
     )
 
 
+class CreateEducationView(CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = EducationSerializer
+    parser_classes = (FormParser, MultiPartParser)
+
+    def create(self, request, *args, **kwargs):
+        duration = request.data.get("duration")
+        school = request.data.get("school")
+        address = request.data.get("address")
+        location = request.data.get("location")
+        start_at = request.data.get("start_at")
+        end_at = request.data.get("end_at")
+        school_url = request.data.get("school_url")
+        description = request.data.get("description")
+        username = request.data.get("username")
+        creator = get_object_or_404(User, username=username)
+
+        with transaction.atomic():
+            education = Education.objects.create(
+                user=creator, 
+                address=address, 
+                start_at=start_at, 
+                end_at=end_at, 
+                duration=duration, 
+                school=school, 
+                location=location,
+                school_url=school_url,
+                description=description
+            )
+        d = EducationSerializer(education).data
+        return Response({
+                "success": d,
+            }, status=status.HTTP_201_CREATED)
+
+
+class CreateExperienceView(CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ExperienceSerializer
+    parser_classes = (FormParser, MultiPartParser)
+
+    def create(self, request, *args, **kwargs):
+        duration = request.data.get("duration")
+        company = request.data.get("company")
+        title = request.data.get("title")
+        description = request.data.get("description")
+        username = request.data.get("username")
+        creator = get_object_or_404(User, username=username)
+
+        with transaction.atomic():
+            experience = Experience.objects.create(
+                user=creator, 
+                title=title, 
+                duration=duration, 
+                company=company, 
+                description=description
+            )
+        d = EducationSerializer(experience).data
+        return Response({
+                "success": d,
+            }, status=status.HTTP_201_CREATED)
+
+
+class CreateBadgeView(CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BadgeSerializer
+    parser_classes = (FormParser, MultiPartParser)
+
+    def create(self, request, *args, **kwargs):
+        image = request.data.get("image")
+        title = request.data.get("title")
+        username = request.data.get("username")
+        creator = get_object_or_404(User, username=username)
+
+        with transaction.atomic():
+            experience = Experience.objects.create(
+                user=creator, 
+                title=title, 
+                image=image, 
+            )
+        d = EducationSerializer(experience).data
+        return Response({
+                "success": d,
+            }, status=status.HTTP_201_CREATED)
+
+
 class UserDetailView(RetrieveAPIView):
     lookup_field = "username"
     permission_classes = (IsAuthenticated,)
@@ -580,6 +653,66 @@ class UserUpdateView(UpdateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = ListUserSerializer
     queryset = User.objects.all()
+    parser_classes = (FormParser, MultiPartParser)
+
+
+class ExperienceDetailView(RetrieveAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ExperienceSerializer
+    queryset = Experience.objects.all()
+
+
+class ExperienceUpdateView(UpdateAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ExperienceSerializer
+    queryset = Experience.objects.all()
+    parser_classes = (FormParser, MultiPartParser)
+
+
+class EducationDetailView(RetrieveAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = EducationSerializer
+    queryset = Education.objects.all()
+
+
+class EducationUpdateView(UpdateAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = EducationSerializer
+    queryset = Education.objects.all()
+    parser_classes = (FormParser, MultiPartParser)
+
+
+class RecordDetailView(RetrieveAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RecordSerializer
+    queryset = Record.objects.all()
+
+
+class RecordUpdateView(UpdateAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RecordSerializer
+    queryset = Record.objects.all()
+    parser_classes = (FormParser, MultiPartParser)
+
+
+class BadgeDetailView(RetrieveAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BadgeSerializer
+    queryset = Badge.objects.all()
+
+
+class BadgeUpdateView(UpdateAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BadgeSerializer
+    queryset = Badge.objects.all()
     parser_classes = (FormParser, MultiPartParser)
 
 
@@ -615,6 +748,34 @@ class UserDeleteView(DestroyAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = ListUserSerializer
     queryset = User.objects.all()
+
+
+class EducationDeleteView(DestroyAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = EducationSerializer
+    queryset = Education.objects.all()
+
+
+class ExperienceDeleteView(DestroyAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ExperienceSerializer
+    queryset = Experience.objects.all()
+
+
+class RecordDeleteView(DestroyAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RecordSerializer
+    queryset = Record.objects.all()
+
+
+class BadgeDeleteView(DestroyAPIView):
+    lookup_field = "id"
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BadgeSerializer
+    queryset = Badge.objects.all()
 
 
 class ChangePassword(APIView):

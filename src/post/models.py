@@ -134,7 +134,8 @@ class Post(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     link = models.URLField(blank=True, null=True, max_length=2000)
     text = models.TextField(blank=True, null=True)
-    post_type = models.CharField(max_length=300, blank=True, null=True)
+    post_type = models.CharField(max_length=300, blank=True, null=True)#Public or Private
+    post_status = models.CharField(max_length=300, default="normal")#normal, recommendation or review
     category = models.CharField(max_length=300, blank=True, null=True)
     perspective = models.CharField(max_length=300, blank=True, null=True)
     answer_one = models.CharField(max_length=300, blank=True, null=True)
@@ -168,6 +169,7 @@ class Post(models.Model):
     is_deleted = models.BooleanField(default=False)
     is_repost = models.BooleanField(default=False)
     is_reviewed = models.BooleanField(default=False)
+    is_walk_through = models.BooleanField(default=False)
     has_perspective = models.BooleanField(default=False)
     voters = models.ManyToManyField(
         'account.User',

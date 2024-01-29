@@ -36,7 +36,7 @@ from django.db.models import Count
 
 from .serializers import *
 from post.models import *
-from account.models import User
+from account.models import Record
 from extensions.pagination import CustomPagination
 from notifications.models import Notification
 
@@ -63,7 +63,7 @@ from rest_framework.generics import (
     ListCreateAPIView
 )
 
-# TODO Notifications automatically from the group you are part of, on comments on your posts
+# TODO Notifications automatically from the group you are part of, on comments on your comments
 
 
 
@@ -71,10 +71,10 @@ from rest_framework.generics import (
 @permission_classes((IsAuthenticated,))
 def RePostView(request):
     text = request.data.get("text")
-    group_id = request.data.get("group_id")
+    directory_id = request.data.get("directory_id")
     page_id = request.data.get("page_id")
     p_id = request.data.get("p_id")
-    group = get_object_or_404(Group, id=group_id)
+    directory = get_object_or_404(Directory, id=directory_id)
     page = get_object_or_404(Page, id=page_id)
 
     try:
@@ -89,12 +89,12 @@ def RePostView(request):
         return Response({"error": "Already reposted !",}, status=status.HTTP_200_OK)
     else:
         with transaction.atomic():
-            if group_id:
+            if directory_id:
                 re_post = Post.objects.create(
                     text=text,
                     author=request.user,
                     parent=post,
-                    group=group,
+                    directory=directory,
                     is_repost=True,
                 )
             elif page_id:
@@ -133,19 +133,21 @@ class CreatePostView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         title = request.data.get("title")
-        group_id = request.data.get("group_id")
+        directory_id = request.data.get("directory_id")
         page_id = request.data.get("page_id")
+        is_walk_through = request.data.get("is_walk_through")
         attachment = request.data.get("attachment")
         video = request.data.get("video")
         link = request.data.get("link")
         text = request.data.get("text")
         post_type = request.data.get("post_type")
-        group = get_object_or_404(Group, id=group_id)
+        post_status = request.data.get("post_status")
+        directory = get_object_or_404(Directory, id=directory_id)
         page = get_object_or_404(Page, id=page_id)
         author = request.user
 
         with transaction.atomic():
-            if group_id:
+            if directory_id and is_walk_through:
                 post = Post.objects.create(
                     title=title,
                     attachment=attachment,
@@ -153,9 +155,23 @@ class CreatePostView(CreateAPIView):
                     link=link,
                     text=text,
                     author=author,
-                    group=group,
+                    directory=directory,
+                    is_walk_through=True,
                     post_type=post_type,
+                    post_status=post_status,
                 )
+            elif directory_id:
+                post = Post.objects.create(
+                    title=title,
+                    attachment=attachment,
+                    video=video,
+                    link=link,
+                    text=text,
+                    author=author,
+                    directory=directory,
+                    post_type=post_type,
+                    post_status=post_status,
+                )    
             elif page_id:
                 post = Post.objects.create(
                     title=title,
@@ -166,6 +182,7 @@ class CreatePostView(CreateAPIView):
                     author=author,
                     page=page,
                     post_type=post_type,
+                    post_status=post_status,
                 )  
             else:
                 post = Post.objects.create(
@@ -176,6 +193,7 @@ class CreatePostView(CreateAPIView):
                     text=text,
                     author=author,
                     post_type=post_type,
+                    post_status=post_status,
                 )      
         d = PostSerializer(post).data
         return Response(d, status=status.HTTP_201_CREATED)
@@ -237,9 +255,9 @@ class DetailPostOfUser(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(['GET'])
 @permission_classes((IsAuthenticated,))
-def ListPostsOfGroup(request, group_name):
+def ListPostsOfDirectory(request, directory_name):
     post = Post.objects.filter(
-            group__name=group_name, is_reviewed=True, is_deleted=False
+            directory__name=directory_name, is_reviewed=True, is_deleted=False
         )
     paginator = CustomPagination()
     result_page = paginator.paginate_queryset(post,request)
@@ -248,7 +266,7 @@ def ListPostsOfGroup(request, group_name):
     return paginator.get_paginated_response({'data':serializer.data})     
     
 
-class DetailPostOfGroup(generics.RetrieveUpdateDestroyAPIView):
+class DetailPostOfDirectory(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Post.objects.all()
 
@@ -259,7 +277,7 @@ class DetailPostOfGroup(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
-        conditions = {"group__name": self.kwargs["group_name"], "id": self.kwargs["post_id"]}
+        conditions = {"directory__name": self.kwargs["directory_name"], "id": self.kwargs["post_id"]}
         return get_object_or_404(queryset, **conditions)
 
     def put(self, request, *args, **kwargs):
@@ -362,10 +380,10 @@ def VoteOnPost(request):
 
         if value == 1:
             Notification.objects.get_or_create(
-                notification_type="VP",
+                notification_type="L",
                 post=post,
                 comments=(
-                    f"Go see your post “{post.title}...”"
+                    f"@{voter.username} likes your post “{post.text[:7]}...”"
                 ),
                 to_user=post.author,
                 from_user=voter,
@@ -432,6 +450,18 @@ class CreateCommentView(CreateAPIView):
             )
             post.comments = post.comments + 1
             post.save()
+        if post.post_type == "qna" or "poll":
+            Record.objects.get_or_create(
+                user=author,
+                aura="6",
+                posts=post,
+                time="3",
+                type="minor",
+                status="closed",
+                description=(f"You earned aura by engaging on this post “{post.text[:7]}...”")
+            )
+            author.total_aura = author.total_aura + 6
+            author.save()    
         if parent_comment_id and Comment.objects.get(pk=parent_comment_id):
             Notification.objects.get_or_create(
                 notification_type="C",
@@ -444,10 +474,10 @@ class CreateCommentView(CreateAPIView):
             )
         else:
             Notification.objects.get_or_create(
-                notification_type="P",
+                notification_type="C",
                 post=post,
                 comments=(
-                    f"@{author.username} replied to your post"
+                    f"@{author.username} commented on your post"
                 ),
                 to_user=post.author,
                 from_user=author,
@@ -487,10 +517,10 @@ def VoteOnComment(request):
 
         if value == 1:
             Notification.objects.get_or_create(
-                notification_type="VC",
+                notification_type="L",
                 comment=comment,
                 comments=(
-                    f"Go see your comment on {comment.post.group.name}: “{comment.post.title}...”"
+                    f"@{voter.username} likes your comment “{comment.text[:7]}...”"
                 ),
                 to_user=comment.author,
                 from_user=voter,
@@ -744,11 +774,22 @@ class CreateAnswerView(CreateAPIView):
             )
             post.answers = post.answers + 1
             post.save()
+            Record.objects.get_or_create(
+                user=author,
+                aura="6",
+                posts=post,
+                time="3",
+                type="minor",
+                status="closed",
+                description=(f"You earned 6 aura by engaging on this post “{post.text[:7]}...”")
+            )
+            author.total_aura = author.total_aura + 6
+            author.save()
         if parent_answer_id and Answer.objects.get(pk=parent_answer_id):
             Notification.objects.get_or_create(
                 notification_type="C",
                 answer=Answer.objects.get(pk=parent_answer_id),
-                posts=(
+                comments=(
                     f"@{author.username} replied to your question"
                 ),
                 to_user=Answer.objects.get(pk=parent_answer_id).author,
@@ -756,16 +797,16 @@ class CreateAnswerView(CreateAPIView):
             )
         else:
             Notification.objects.get_or_create(
-                notification_type="P",
+                notification_type="C",
                 post=post,
-                posts=(
+                comments=(
                     f"@{author.username} replied to your question"
                 ),
                 to_user=post.author,
                 from_user=author,
             )
 
-        d = AnswerSerializer(Answer).data
+        d = AnswerSerializer(answer).data
         return Response(d, status=status.HTTP_201_CREATED)
 
 
@@ -799,10 +840,10 @@ def VoteOnAnswer(request):
 
         if value == 1:
             Notification.objects.get_or_create(
-                notification_type="VC",
+                notification_type="L",
                 answer=answer,
-                posts=(
-                    f"Go see your question on “{answer.post.title}...”"
+                comments=(
+                    f"@{voter.username} likes your answer “{answer.body[:7]}...”"
                 ),
                 to_user=answer.author,
                 from_user=voter,

@@ -67,7 +67,8 @@ class NewslettersViewSet(viewsets.ModelViewSet):
                 user = User.objects.get(id=id)
                 if req.method == 'POST':
                     newsletter.subscribers.add(user)
-                    #TODO improve this later
+                    #TODO improve this later by adding a default newsletter template
+                    #html_tpl_path = "email_templates/welcome.html"
                     email_body = 'Hello ' + user.username + ' welcome to \n' + newsletter.name
                     data = {'email_body': email_body,
                             'to_email': user.email,
@@ -88,9 +89,10 @@ class NewslettersViewSet(viewsets.ModelViewSet):
         if req.method == 'GET':
             serializer = UserSerializer(newsletter.target, many=True)
             return Response(status=status.HTTP_200_OK, data=serializer.data)
-        #The will be an engine which will add users automatically to a newsletter as being targets, 
+        #TODO There will be an engine which will add users automatically to a newsletter as being targets, 
         # and will be setup based on their likes, what the view, and other metrics on the platform, 
         # as it will add users as being targets, which will be seen on the frontend as a way to turn them into subscribers
+        # so tht the owner of the newsletter can send them invites to join the newsletter
         if req.method in ['POST', 'DELETE']:
             users_id = req.data['users']
             for id in users_id:
@@ -229,7 +231,7 @@ class CreateArticleView(CreateAPIView):
         newsletter_name = request.data.get("newsletter_name")
         newsletter = get_object_or_404(Newsletter, name=newsletter_name)
 
-        #TODO add the functionality of communicating with subscribers via InMail and Email that a new article has been created
+        #TODO add the functionality of communicating with subscribers via Notification and Email that a new article has been created
         with transaction.atomic():
             article = Article.objects.create(
                 newsletter=newsletter, 
